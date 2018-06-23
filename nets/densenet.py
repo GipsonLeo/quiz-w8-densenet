@@ -140,7 +140,7 @@ def densenet(images, num_classes=1001, is_training=False,
             final_stage = stage + 1
             x = block(net=x, layers=nb_layers[-1], growth=growth,scope='dense_block'+str(final_stage))
             #GlobalAveragePooling2D
-            x = slim.avg_pool2d(inputs=x,kernel_size=[7, 7], scope='global_pool') 
+            x = slim.avg_pool2d(inputs=x,kernel_size=[6, 6], scope='global_pool') 
             x = slim.flatten(x, scope='flatten')
             #fully_connected
             logits = slim.fully_connected(inputs=x, num_outputs=num_classes, activation_fn=None, scope='fc')
