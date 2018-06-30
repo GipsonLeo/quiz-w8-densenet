@@ -19,6 +19,7 @@ def parse_args(check=True):
     parser.add_argument('--clone_on_cpu', type=bool, default=False)
     parser.add_argument('--optimizer', type=str, default='rmsprop')
     parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--iterations', type=int, default=6000)
 
     # eval
     parser.add_argument('--dataset_split_name', type=str, default='validation')
@@ -46,7 +47,10 @@ if __name__ == '__main__':
         ckpt = ' --checkpoint_path=' + FLAGS.checkpoint_path
     else:
         ckpt = ''
-    for i in range(5):
+    # 
+    num_epoch = FLAGS.iterations // step_per_epoch
+    
+    for i in range(num_epoch):
         steps = int(step_per_epoch * (i + 1))
         # train 1 epoch
         print('################    train    ################')
