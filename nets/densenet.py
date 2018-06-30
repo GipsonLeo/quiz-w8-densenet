@@ -128,7 +128,7 @@ def densenet(images, num_classes=1001, is_training=False,
                 stage = block_idx+1  
                 x = block(net=x, layers=nb_layers[block_idx], growth=growth,scope='dense_block'+str(stage)) 
                 # transition_block
-                num_outputs = reduce_dim(net)
+                num_outputs = reduce_dim(x)
                 x = bn_act_conv_drp(current=x, num_outputs=num_outputs, kernel_size=[1, 1], scope='trans_block'+str(stage)+'conv') 
                 x = slim.avg_pool2d(inputs=x, kernel_size=[2, 2], stride=2, scope='trans_block'+str(stage)+'pool') 
                 
