@@ -99,10 +99,8 @@ def densenet(images, num_classes=1001, is_training=False,
 #                     trainable=True,
 #                     scope=None):
             #------------------------
-            # DenseNet layers are very narrow (e.g., 12 filters per layer),so simply set small value 12 for fast training
-            # nb_filter = 12 # 64
-            # From architecture for cifar10 (Table 1 in the paper)
-            # nb_layers = [6,12,24,16] # For DenseNet-121  
+            # DenseNet-121 for cifar10 (Table 1 in the paper)
+            nb_layers = [6,12,24,16] 
             
             #------------------------
             # Initial convolution
@@ -112,58 +110,39 @@ def densenet(images, num_classes=1001, is_training=False,
             # In our experiments on ImageNet, we use a DenseNet-BC structure 
             # with 4 dense blocks on 224×224 input images.
             # The initial convolution layer comprises 2k convolutions of size 7×7 with stride 2
-            
-            
-            with tf.variable_scope('pre_processing') :                          #预处理层
-                net=slim.conv2d(images, 2*growth, [7,7],stride=2,scope= 'pre_con2d')
-                net=slim.max_pool2d(net, [3, 3], stride=2, scope='pre_pool')
-                end_points['pre_processing']=net
+            #------------------------
+            with tf.variable_scope('init_conv') :     
+                x = slim.conv2d(inputs=images,num_outputs=2*growth,kernel_size=[7, 7], stride=2, padding='SAME',  
+                      weights_initializer=trunc_normal(stddev =0.01),  
+                      weights_regularizer=None, scope='init_conv)  #slim.l2_regularizer(0.0005) #init_conv
+                x = slim.batch_norm(x, scope='init_bn')
+                # x = tf.nn.relu(x) #there is Activation in conv2d 
+                x= slim.max_pool2d(x, [3, 3], stride=2, scope='init_pool')
+                # Note : map size = 224/2/2 = 56,that is 56x56
+            #------------------------
+            # Add dense blocks
+            nb_dense_block = len(nb_layers)
+            # later work: think about stack and repeat for better reading
+            for block_idx in range(nb_dense_block - 1):
+                # dense_block
+                stage = block_idx+1  
+                x = block(net=x, layers=nb_layers[block_idx], growth=growth,scope='dense_block'+str(stage)) 
+                # transition_block
+                num_outputs = reduce_dim(net)
+                x = bn_act_conv_drp(current=x, num_outputs=num_outputs, kernel_size=[1, 1], scope='trans_block'+str(stage)+'conv') 
+                x = slim.avg_pool2d(inputs=x, kernel_size=[2, 2], stride=2, scope='trans_block'+str(stage)+'pool') 
                 
-            
-            with tf.variable_scope('block1') :                                  #block1
-                net=block(net, 6, growth, scope='block1')
-                end_points['block1']=net
-                
-            
-            with tf.variable_scope('transition1') :                            #变换层1
-                net=bn_act_conv_drp(net, reduce_dim(net), [1,1], scope='trans1_con2d')
-                net=slim.max_pool2d(net, [2, 2], stride=2, scope='trans1_pool')
-                end_points['transition1']=net
-                
-            
-            with tf.variable_scope('block2') :                                 #block2
-                net=block(net, 12, growth, scope='block2')
-                end_points['block2']=net
-                
-            
-            with tf.variable_scope('transition2') :                            #变换层2
-                net=bn_act_conv_drp(net, reduce_dim(net), [1,1], scope='trans2_con2d')
-                net=slim.max_pool2d(net, [2, 2], stride=2, scope='trans2_pool')
-                end_points['transition2']=net
-                
-                
-            with tf.variable_scope('block3') :                                #block3
-                net=block(net, 24, growth, scope='block3')
-                end_points['block3']=net
-                
-            end_points['transition3']=net
-            with tf.variable_scope('transition3') :                           #变换层3
-                net=bn_act_conv_drp(net, reduce_dim(net), [1,1], scope='trans3_con2d')
-                net=slim.max_pool2d(net, [2, 2], stride=2, scope='trans3_pool')
-                
-                
-            
-            with tf.variable_scope('block4') :                               #block4
-                net=block(net, 16, growth, scope='block4')
-                end_points['block4']=net
-                
-            
-            with tf.variable_scope('classify_layer') :                       #分类层
-                net=slim.max_pool2d(net, net.shape[1:3], scope='global_average')
-                net=slim.flatten(net, scope='flatten')
-                logits =slim.fully_connected(net, num_classes, activation_fn=None, scope='logits')
-                net=tf.nn.softmax(logits, name='predictions')
-                end_points['classify_layer']=net
+            # Note : map size = 56/2/2/2 = 7,that is 7x7
+            #------------------------
+            # Classification Layer
+            final_stage = stage + 1
+            x = block(net=x, layers=nb_layers[-1], growth=growth,scope='dense_block'+str(final_stage))
+            #GlobalAveragePooling2D
+            x = slim.avg_pool2d(inputs=x,kernel_size=x.shape[1:3], scope='global_pool') # kernel_size=[7, 7]
+            x = slim.flatten(x, scope='flatten')
+            #fully_connected
+            logits = slim.fully_connected(inputs=x, num_outputs=num_classes, activation_fn=None, scope='fc')
+            end_points = tf.nn.softmax(logits, name='Predictions') 
             ##########################
 
     return logits, end_points
