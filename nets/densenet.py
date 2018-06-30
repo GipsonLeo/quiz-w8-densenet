@@ -112,9 +112,9 @@ def densenet(images, num_classes=1001, is_training=False,
             # The initial convolution layer comprises 2k convolutions of size 7×7 with stride 2
             #------------------------
             with tf.variable_scope('init_conv') :     
-                x = slim.conv2d(inputs=images,num_outputs=2*growth,kernel_size=[7, 7], stride=2, padding='SAME', scope='init_conv)  
-                      #weights_initializer=trunc_normal(stddev =0.01),  
-                      #weights_regularizer=None, scope='init_conv)  #slim.l2_regularizer(0.0005) #init_conv
+                x = slim.conv2d(inputs=images,num_outputs=2*growth,kernel_size=[7, 7], stride=2, padding='SAME',   
+                      weights_initializer=trunc_normal(stddev =0.01),  
+                      weights_regularizer=None, scope='init_conv')  #slim.l2_regularizer(0.0005) #init_conv
                 x = slim.batch_norm(x, scope='init_bn')
                 # x = tf.nn.relu(x) #there is Activation in conv2d 
                 x= slim.max_pool2d(x, [3, 3], stride=2, scope='init_pool')
