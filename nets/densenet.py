@@ -141,6 +141,8 @@ def densenet(images, num_classes=1001, is_training=False,
             with tf.variable_scope('classify_layer') : 
                 final_stage = stage + 1
                 x = block(net=x, layers=nb_layers[-1], growth=growth,scope='dense_block'+str(final_stage))
+                x = slim.batch_norm(x, scope='batch_norm')
+                x = tf.nn.relu(x, scope='actv_relu')
                 #GlobalAveragePooling2D
                 x = slim.avg_pool2d(inputs=x,kernel_size=x.shape[1:3], scope='global_pool') # kernel_size=[7, 7]
                 x = slim.flatten(x, scope='flatten')
