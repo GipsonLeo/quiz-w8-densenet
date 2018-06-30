@@ -119,30 +119,34 @@ def densenet(images, num_classes=1001, is_training=False,
                 # x = tf.nn.relu(x) #there is Activation in conv2d 
                 x= slim.max_pool2d(x, [3, 3], stride=2, scope='init_pool')
                 # Note : map size = 224/2/2 = 56,that is 56x56
+                end_points['init_conv']=net
             #------------------------
             # Add dense blocks
             nb_dense_block = len(nb_layers)
             # later work: think about stack and repeat for better reading
-            for block_idx in range(nb_dense_block - 1):
-                # dense_block
-                stage = block_idx+1  
-                x = block(net=x, layers=nb_layers[block_idx], growth=growth,scope='dense_block'+str(stage)) 
-                # transition_block
-                num_outputs = reduce_dim(x)
-                x = bn_act_conv_drp(current=x, num_outputs=num_outputs, kernel_size=[1, 1], scope='trans_block'+str(stage)+'conv') 
-                x = slim.avg_pool2d(inputs=x, kernel_size=[2, 2], stride=2, scope='trans_block'+str(stage)+'pool') 
-                
+            for block_idx in range(nb_dense_block - 1): 
+                stage = block_idx+1    
+                with tf.variable_scope('block'+str(stage)) :                     
+                    # dense_block
+                    x = block(net=x, layers=nb_layers[block_idx], growth=growth,scope='dense_block') 
+                    # transition_block
+                    num_outputs = reduce_dim(x)
+                    x = bn_act_conv_drp(current=x, num_outputs=num_outputs, kernel_size=[1, 1], scope='trans_block_conv') 
+                    x = slim.avg_pool2d(inputs=x, kernel_size=[2, 2], stride=2, scope='trans_block_pool') 
+                    #end_points
+                    end_points['block'+str(stage)]=x
             # Note : map size = 56/2/2/2 = 7,that is 7x7
             #------------------------
             # Classification Layer
-            final_stage = stage + 1
-            x = block(net=x, layers=nb_layers[-1], growth=growth,scope='dense_block'+str(final_stage))
-            #GlobalAveragePooling2D
-            x = slim.avg_pool2d(inputs=x,kernel_size=x.shape[1:3], scope='global_pool') # kernel_size=[7, 7]
-            x = slim.flatten(x, scope='flatten')
-            #fully_connected
-            logits = slim.fully_connected(inputs=x, num_outputs=num_classes, activation_fn=None, scope='fc')
-            end_points = tf.nn.softmax(logits, name='Predictions') 
+            with tf.variable_scope('classify_layer') : 
+                final_stage = stage + 1
+                x = block(net=x, layers=nb_layers[-1], growth=growth,scope='dense_block'+str(final_stage))
+                #GlobalAveragePooling2D
+                x = slim.avg_pool2d(inputs=x,kernel_size=x.shape[1:3], scope='global_pool') # kernel_size=[7, 7]
+                x = slim.flatten(x, scope='flatten')
+                #fully_connected
+                logits = slim.fully_connected(inputs=x, num_outputs=num_classes, activation_fn=None, scope='fc')
+                end_points['classify_layer'] = tf.nn.softmax(logits, name='Predictions') 
             ##########################
 
     return logits, end_points
