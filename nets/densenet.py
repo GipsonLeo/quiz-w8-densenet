@@ -119,7 +119,7 @@ def densenet(images, num_classes=1001, is_training=False,
                 # x = tf.nn.relu(x) #there is Activation in conv2d 
                 x= slim.max_pool2d(x, [3, 3], stride=2, scope='init_pool')
                 # Note : map size = 224/2/2 = 56,that is 56x56
-                end_points['init_conv']=net
+                end_points['init_conv']=x
             #------------------------
             # Add dense blocks
             nb_dense_block = len(nb_layers)
